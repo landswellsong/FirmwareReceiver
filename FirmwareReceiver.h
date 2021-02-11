@@ -7,7 +7,8 @@ it resets back to FLASH0 so our new sketch can run.
 #include <due_can.h>
 
 #define DEVICETOK	0xCAFEFACE
-#define CANBASE	0x100
+#define CANBASE	    0x79b
+#define CANANSWER   0x7bb
 
 void fwGotFrame(CAN_FRAME *frame);
 

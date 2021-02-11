@@ -73,7 +73,7 @@ void fwGotFrame(CAN_FRAME *frame)
 #ifdef SER_DEBUG
 				Serial.println("Starting firmware upload process");
 #endif
-				outFrame.id = CANBASE + 0x10;
+				outFrame.id = CANANSWER;
 				outFrame.extended = false;
 				outFrame.length = 8;
 				outFrame.data.low = (uint32_t)0xDEAFDEAD;

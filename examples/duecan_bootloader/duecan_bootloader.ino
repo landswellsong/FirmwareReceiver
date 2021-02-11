@@ -2,7 +2,8 @@
 #include "due_can.h"
 #include "DueFlashStorage.h"
 
-#define CANBASE		0x100
+#define CANBASE		0x79b
+#define CANANSWER	0x7bb
 #define DEVICETOK  0xCAFEFACE
 
 uint32_t flashWritePosition;
@@ -12,6 +13,12 @@ uint8_t pageBuffer[IFLASH1_PAGE_SIZE];
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+enum BOOT_COMMANDS = {
+	START_FLASH = 0xEF,
+	DATA_PACKET = 0xFF,
+	END_FLASH = 0xDE
+};
 
 __attribute__ ((long_call, section (".ramfunc")))
 void setupForReboot()
@@ -68,33 +75,34 @@ void loop()
 	int location, bufferWritePtr;
 	if (Can1.available() > 0) {
 		Can1.read(inFrame);
-		switch (inFrame.id)
+
+		switch (inFrame.data.byte[0])
 		{
-      case CANBASE: //just in case we're already in the bootloader but someone sends a "go to bootloader" message to get started
-        if (inFrame.data.low == (uint32_t)0xDEADBEEF)
-        {
-          Serial.print("@");
-          if (inFrame.data.high == DEVICETOK)
-          {
-            Serial.println("Starting firmware upload process");
-            outFrame.id = CANBASE + 0x10;
-            outFrame.extended = false;
-            outFrame.length = 8;
-            outFrame.data.low = (uint32_t)0xDEAFDEAD;
-            outFrame.data.high = DEVICETOK;
-            Can1.sendFrame(outFrame);
-          }
-        }
-        break;
+			case START_FLASH: //just in case we're already in the bootloader but someone sends a "go to bootloader" message to get started
+				if (inFrame.data.low == (uint32_t)0xDEADBEEF)
+				{
+					Serial.print("@");
+					if (inFrame.data.high == DEVICETOK)
+					{
+						Serial.println("Starting firmware upload process");
+						outFrame.id = CANANSWER;
+						outFrame.extended = false;
+						outFrame.length = 8;
+						outFrame.data.low = (uint32_t)0xDEAFDEAD;
+						outFrame.data.high = DEVICETOK;
+						Can1.sendFrame(outFrame);
+					}
+				}
+				break;
         
-			case CANBASE + 0x16:
+			case DATA_PACKET:
 				Serial.print("-");
-				location = inFrame.data.byte[0] + (256 * inFrame.data.byte[1]);
+				location = inFrame.data.byte[1] + (256 * inFrame.data.byte[2]);
 				bufferWritePtr = (location * 4) % IFLASH_PAGE_SIZE;
-				pageBuffer[bufferWritePtr++] = inFrame.data.byte[2];
 				pageBuffer[bufferWritePtr++] = inFrame.data.byte[3];
 				pageBuffer[bufferWritePtr++] = inFrame.data.byte[4];
 				pageBuffer[bufferWritePtr++] = inFrame.data.byte[5];
+				pageBuffer[bufferWritePtr++] = inFrame.data.byte[6];
 				if (bufferWritePtr == (IFLASH1_PAGE_SIZE))
 				{					
 					Serial.print("Writing flash at ");
@@ -102,14 +110,15 @@ void loop()
 					dueFlashStorage.write(flashWritePosition, pageBuffer, IFLASH1_PAGE_SIZE, 0);
 					flashWritePosition += IFLASH1_PAGE_SIZE;
 				}		
-				outFrame.id = CANBASE + 0x20;
+				outFrame.id = CANANSWER;
 				outFrame.extended = false;
 				outFrame.length = 2;
 				outFrame.data.byte[0] = inFrame.data.byte[0];
 				outFrame.data.byte[1] = inFrame.data.byte[1];
 				Can1.sendFrame(outFrame);
 				break;
-			case CANBASE + 0x30:
+
+			case END_FLASH:
 				Serial.print("#");
 				if (inFrame.data.low == 0xC0DEFADE)
 				{				
