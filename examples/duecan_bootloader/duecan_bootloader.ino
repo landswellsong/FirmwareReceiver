@@ -56,8 +56,8 @@ void setup()
 {
 	flashWritePosition = 0;
 	Serial.begin(115200);
-	Can0.begin(500000);
-	Can0.setRXFilter(CANBASE, 0x700, false);
+	Can1.begin(500000);
+	Can1.setRXFilter(CANBASE, 0x700, false);
   Serial.println("Started CAN Bootloader.");
 }
 
@@ -66,8 +66,8 @@ void loop()
 	CAN_FRAME inFrame;
 	CAN_FRAME outFrame;
 	int location, bufferWritePtr;
-	if (Can0.available() > 0) {
-		Can0.read(inFrame);
+	if (Can1.available() > 0) {
+		Can1.read(inFrame);
 		switch (inFrame.id)
 		{
       case CANBASE: //just in case we're already in the bootloader but someone sends a "go to bootloader" message to get started
@@ -82,7 +82,7 @@ void loop()
             outFrame.length = 8;
             outFrame.data.low = (uint32_t)0xDEAFDEAD;
             outFrame.data.high = DEVICETOK;
-            Can0.sendFrame(outFrame);
+            Can1.sendFrame(outFrame);
           }
         }
         break;
@@ -107,7 +107,7 @@ void loop()
 				outFrame.length = 2;
 				outFrame.data.byte[0] = inFrame.data.byte[0];
 				outFrame.data.byte[1] = inFrame.data.byte[1];
-				Can0.sendFrame(outFrame);				
+				Can1.sendFrame(outFrame);
 				break;
 			case CANBASE + 0x30:
 				Serial.print("#");
