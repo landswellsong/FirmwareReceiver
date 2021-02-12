@@ -90,6 +90,8 @@ void loop()
 						outFrame.data.low = (uint32_t)0xDEAFDEAD;
 						outFrame.data.high = DEVICETOK;
 						Can1.sendFrame(outFrame);
+						/* Resetting flashWritePosition */
+						flashWritePosition = 0;
 					}
 				}
 				break;
