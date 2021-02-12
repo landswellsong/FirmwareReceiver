@@ -112,8 +112,8 @@ void loop()
 				outFrame.id = CANANSWER;
 				outFrame.extended = false;
 				outFrame.length = 2;
-				outFrame.data.byte[0] = inFrame.data.byte[0];
-				outFrame.data.byte[1] = inFrame.data.byte[1];
+				outFrame.data.byte[0] = inFrame.data.byte[1];
+				outFrame.data.byte[1] = inFrame.data.byte[2];
 				Can1.sendFrame(outFrame);
 				break;
 
