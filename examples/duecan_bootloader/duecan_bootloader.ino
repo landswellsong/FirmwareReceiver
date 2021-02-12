@@ -14,14 +14,13 @@ uint8_t pageBuffer[IFLASH1_PAGE_SIZE];
 extern "C" {
 #endif
 
-enum BOOT_COMMANDS = {
+enum {
 	START_FLASH = 0xEF,
 	DATA_PACKET = 0xFF,
 	END_FLASH = 0xDE
-};
+} BOOT_COMMANDS;
 
-__attribute__ ((long_call, section (".ramfunc")))
-void setupForReboot()
+__attribute__ ((long_call, section (".ramfunc"))) void setupForReboot()
 {
 	__disable_irq();
 
