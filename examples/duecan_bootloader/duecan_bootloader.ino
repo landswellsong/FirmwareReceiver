@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "due_can.h"
 #include "DueFlashStorage.h"
+#include "aes.hpp"
 
 #define CANBASE		0x79b
 #define CANANSWER	0x7bb
@@ -19,6 +20,9 @@ enum {
 	DATA_PACKET = 0xFF,
 	END_FLASH = 0xDE
 } BOOT_COMMANDS;
+
+uint8_t aes_key[] = { 240, 32, 169, 211, 43, 17, 238, 36, 95, 60, 93, 79, 8, 58, 40, 247 };
+struct AES_ctx aes_ctx;
 
 __attribute__ ((long_call, section (".ramfunc"))) void setupForReboot()
 {
@@ -57,6 +61,17 @@ __attribute__ ((long_call, section (".ramfunc"))) void setupForReboot()
 	while (true); //bye cruel world!
 }
 
+static void decrypt_pagebuffer()
+{
+	const size_t BLOCK_SIZE = 16;
+	/* NOTE: IFLASH_PAGE_SIZE is divisible by BLOCK_SIZE */
+	uint8_t *ptr = pageBuffer;
+	for (int i = 0; i < IFLASH_PAGE_SIZE/BLOCK_SIZE; i++)
+	{
+		AES_ECB_decrypt(&aes_ctx, ptr);
+		ptr += BLOCK_SIZE;
+	}
+}
 
 void setup()
 {
@@ -64,6 +79,7 @@ void setup()
 	Serial.begin(115200);
 	Can1.begin(500000);
 	Can1.setRXFilter(CANBASE, 0x700, false);
+	AES_init_ctx(&aes_ctx, aes_key);
   Serial.println("Started CAN Bootloader.");
 }
 
@@ -108,6 +124,7 @@ void loop()
 				{					
 					Serial.print("Writing flash at ");
 					Serial.println(flashWritePosition);
+					decrypt_pagebuffer();
 					dueFlashStorage.write(flashWritePosition, pageBuffer, IFLASH1_PAGE_SIZE, 0);
 					flashWritePosition += IFLASH1_PAGE_SIZE;
 				}		
@@ -127,6 +144,7 @@ void loop()
 					Serial.println(bufferWritePtr);
 					Serial.print("Writing flash at ");
 					Serial.println(flashWritePosition);
+					decrypt_pagebuffer();
 					dueFlashStorage.write(flashWritePosition, pageBuffer, IFLASH1_PAGE_SIZE, 0);
 					Serial.println("About to set boot mode and reboot");
 					delay(50);
